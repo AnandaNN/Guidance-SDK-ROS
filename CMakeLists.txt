@@ -7,10 +7,23 @@ find_package(catkin REQUIRED COMPONENTS
   std_msgs
   sensor_msgs
   geometry_msgs
+  message_generation
 )
-find_package(OpenCV 2 REQUIRED core highgui)
+
+find_package(OpenCV 3 REQUIRED core highgui)
+
+add_message_files(
+  FILES
+  Motion.msg
+)
+
+generate_messages(
+  DEPENDENCIES
+  std_msgs
+)
 
 catkin_package(
+  CATKIN_DEPENDS message_runtime
 )
 
 include_directories(

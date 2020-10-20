@@ -9,8 +9,9 @@
   <license>TODO</license>
 
   <buildtool_depend>catkin</buildtool_depend>
-  <build_depend>roscpp</build_depend>
+  <build_depend>roscpp message_generation</build_depend>
   <run_depend>roscpp</run_depend>
+  <run_depend>message_runtime</run_depend>
 
   <export>
   </export>

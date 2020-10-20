@@ -20,6 +20,7 @@
 #include <geometry_msgs/TransformStamped.h> //IMU
 #include <geometry_msgs/Vector3Stamped.h> //velocity
 #include <sensor_msgs/LaserScan.h> //obstacle distance & ultrasonic
+#include <guidance/Motion.h>
 
 ros::Publisher depth_image_pub;
 ros::Publisher left_image_pub;
@@ -28,6 +29,7 @@ ros::Publisher imu_pub;
 ros::Publisher obstacle_distance_pub;
 ros::Publisher velocity_pub;
 ros::Publisher ultrasonic_pub;
+ros::Publisher motion_pub;
 
 using namespace cv;
 
@@ -214,6 +216,44 @@ int my_callback(int data_type, int data_len, char *content)
 		ultrasonic_pub.publish(g_ul);
     }
 
+	if ( e_motion == data_type && NULL != content )
+	{
+		motion *motionData = (motion*)content;
+		
+		// publish motion global position
+		guidance::Motion g_motion;
+		g_motion.frame_id = "guidance";
+		g_motion.stamp = ros::Time::now();
+		g_motion.frame_index = motionData->frame_index;
+		
+		g_motion.corresponding_imu_index = motionData->corresponding_imu_index;
+		g_motion.q0 = motionData->q0;
+		g_motion.q1 = motionData->q1;
+		g_motion.q2 = motionData->q2;
+		g_motion.q3 = motionData->q3;
+		g_motion.attitude_status = motionData->attitude_status;
+
+		g_motion.position_in_global_x = motionData->position_in_global_x;
+		g_motion.position_in_global_y = motionData->position_in_global_y;
+		g_motion.position_in_global_z = motionData->position_in_global_z;
+		g_motion.position_status = motionData->position_status;
+
+		g_motion.velocity_in_global_x = motionData->velocity_in_global_x;
+		g_motion.velocity_in_global_y = motionData->velocity_in_global_y;
+		g_motion.velocity_in_global_z = motionData->velocity_in_global_z;
+		g_motion.velocity_status = motionData->velocity_status;
+
+		for( int i = 0; i < 3; i++ )
+		{
+			g_motion.uncertainty_location.push_back(motionData->uncertainty_location[i]);
+			g_motion.uncertainty_velocity.push_back(motionData->uncertainty_velocity[i]);
+		}
+		
+		motion_pub.publish(g_motion);
+
+		// printf("Position gotten %f\n", motionData->position_in_global_x);
+	}
+
     g_lock.leave();
     g_event.set_event();
 
@@ -227,7 +267,7 @@ int main(int argc, char** argv)
 {
     if (argc < 2) {
         show_images = true;
-        verbosity = 2;
+        // verbosity = 2;
     }
 	if(argc==2 && !strcmp(argv[1], "h")){
 		printf("This is demo program showing data from Guidance.\n\t" 
@@ -249,6 +289,7 @@ int main(int argc, char** argv)
     velocity_pub  			= my_node.advertise<geometry_msgs::Vector3Stamped>("/guidance/velocity",1);
     obstacle_distance_pub	= my_node.advertise<sensor_msgs::LaserScan>("/guidance/obstacle_distance",1);
     ultrasonic_pub			= my_node.advertise<sensor_msgs::LaserScan>("/guidance/ultrasonic",1);
+	motion_pub				= my_node.advertise<guidance::Motion>("/guidance/motion",1);
 
     /* initialize guidance */
     reset_config();
@@ -284,6 +325,7 @@ int main(int argc, char** argv)
     select_ultrasonic();
     select_obstacle_distance();
     select_velocity();
+	select_motion();
     /* start data transfer */
     err_code = set_sdk_event_handler(my_callback);
     RETURN_IF_ERR(err_code);
@@ -346,6 +388,7 @@ int main(int argc, char** argv)
                 select_ultrasonic();
                 select_obstacle_distance();
                 select_velocity();
+				select_motion();
 
 				err_code = start_transfer();
 				RETURN_IF_ERR(err_code);
